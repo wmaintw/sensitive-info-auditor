@@ -82,7 +82,7 @@ class Auditor {
             singleCommit.files.each { file ->
                 log.debug(file.filename)
                 detectByFilename(file)
-//                detectByContent(file)
+                detectByContent(file)
             }
         }
     }
