@@ -80,27 +80,24 @@ class Auditor {
             }
 
             singleCommit.files.each { file ->
-                log.debug(file.filename)
-                detectByFilename(file)
-                detectByContent(file)
+                detectByFilename(file, user, repo.name, singleCommit.sha)
+                detectByContent(file, user, repo.name, singleCommit.sha)
             }
         }
     }
 
-    private void detectByFilename(file) {
-        def violations, user
-        violations = detectSensitiveInfo(file.filename)
+    private void detectByFilename(file, user, repoName, singleCommitSha) {
+        def violations = detectSensitiveInfo(file.filename)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repo.name, commit: singleCommit.sha, violations: violations,
+            recordTheseViolations([user: user, repo: repoName, commit: singleCommitSha, violations: violations,
                                    type: "filename", filename: file.filename, content: file.patch])
         }
     }
 
-    private void detectByContent(file) {
-        def violations, user
-        violations = detectSensitiveInfo(file.patch)
+    private void detectByContent(file, user, repoName, singleCommitSha) {
+        def violations = detectSensitiveInfo(file.patch)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repo.name, commit: singleCommit.sha, violations: violations,
+            recordTheseViolations([user: user, repo: repoName, commit: singleCommitSha, violations: violations,
                                    type: "file", filename: file.filename, content: file.patch])
         }
     }
