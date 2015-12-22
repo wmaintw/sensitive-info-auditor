@@ -156,7 +156,7 @@ class Auditor {
         def data = []
 
         // for github rate limit consideration
-        Thread.sleep(500)
+        Thread.sleep(400)
 
         try {
             data = apiClient().get(path: path, query: query, headers: ['Authorization': "Basic ${userPassBase64}",
