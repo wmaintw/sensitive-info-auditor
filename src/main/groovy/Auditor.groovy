@@ -76,29 +76,32 @@ class Auditor {
             def violations = detectSensitiveInfo(singleCommit.commit.message)
             if (isExist(violations)) {
                 recordTheseViolations([user: user, repo: repo.name, commit: singleCommit.sha, violations: violations,
-                                       type: "message", content: singleCommit.commit.message])
+                                       type: "message", content: singleCommit.commit.message,
+                                       fileBlobUrl:"", commitHtmlUrl:singleCommit.html_url])
             }
 
             singleCommit.files.each { file ->
-                detectByFilename(file, user, repo.name, singleCommit.sha)
-                detectByContent(file, user, repo.name, singleCommit.sha)
+                detectByFilename(file, user, repo.name, singleCommit)
+                detectByContent(file, user, repo.name, singleCommit)
             }
         }
     }
 
-    private void detectByFilename(file, user, repoName, singleCommitSha) {
+    private void detectByFilename(file, user, repoName, singleCommit) {
         def violations = detectSensitiveInfo(file.filename)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repoName, commit: singleCommitSha, violations: violations,
-                                   type: "filename", filename: file.filename, content: file.patch])
+            recordTheseViolations([user: user, repo: repoName, commit: singleCommit.sha, violations: violations,
+                                   type: "filename", filename: file.filename, content: file.patch,
+                                   fileBlobUrl:file.blob_url, commitHtmlUrl:singleCommit.html_url])
         }
     }
 
-    private void detectByContent(file, user, repoName, singleCommitSha) {
+    private void detectByContent(file, user, repoName, singleCommit) {
         def violations = detectSensitiveInfo(file.patch)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repoName, commit: singleCommitSha, violations: violations,
-                                   type: "file", filename: file.filename, content: file.patch])
+            recordTheseViolations([user: user, repo: repoName, commit: singleCommit.sha, violations: violations,
+                                   type: "file", filename: file.filename, content: file.patch,
+                                   fileBlobUrl:file.blob_url, commitHtmlUrl:singleCommit.html_url])
         }
     }
 
