@@ -10,15 +10,12 @@ class RateLimit {
 
     def getRateLimit() {
         def userPassBase64 = "${token}:x-oauth-basic".toString().bytes.encodeBase64()
-        def resp = apiClient().get(path: '/users/wmaintw/repos', headers: ['Authorization': "Basic ${userPassBase64}",
+        def limitation = apiClient().get(path: '/rate_limit', headers: ['Authorization': "Basic ${userPassBase64}",
                                                                            'Accept'       : 'application/json',
-                                                                           'User-Agent'   : 'Apache HTTPClient'])
-        println(resp.headers.'X-RateLimit-Limit')
-        println(resp.headers.'X-RateLimit-Remaining')
-
-        def rateResetDate = resp.headers.'X-RateLimit-Reset'
-        println(rateResetDate)
-        println(new Date((rateResetDate as long) * 1000))
+                                                                           'User-Agent'   : 'Apache HTTPClient']).data
+        println(limitation.resources.core.limit)
+        println(limitation.resources.core.remaining)
+        println(new Date((limitation.resources.core.reset as long) * 1000))
     }
 
     def RESTClient apiClient() {
