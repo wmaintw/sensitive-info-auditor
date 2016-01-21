@@ -62,6 +62,7 @@ class Auditor {
     def auditEveryRepo(user, repos) {
         repos.eachWithIndex { repo, repoIndex ->
             log("[${user}] scanning repo: ${repo.name}, (${repoIndex + 1} of ${repos.size()})")
+            checkApiRateLimit()
 
             def commitsPath = "/repos/${user}/${repo.name}/commits"
             log.debug(commitsPath)
@@ -170,6 +171,13 @@ class Auditor {
     def reposOfUser(user) {
         def repos = requestApi("/users/${user}/repos")
         repos.grep { it.fork == false }
+    }
+
+    def checkApiRateLimit() {
+        def limitation = requestApi("/rate_limit")
+        def remaining = limitation.resources.core.remaining
+        def resetDate = new Date((limitation.resources.core.reset as long) * 1000)
+        log("API rate limit remaining: ${remaining}, reset date: ${resetDate}")
     }
 
     def requestApi(path) {
