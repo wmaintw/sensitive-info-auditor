@@ -109,13 +109,31 @@ class Auditor {
         violations.size() > 0
     }
 
-    synchronized recordTheseViolations(recordContent) {
+    synchronized recordTheseViolations(violationRecord) {
         def warningsFilePath = new File("scan-report/${reportDate.time}")
         if (!warningsFilePath.exists()) {
             warningsFilePath.mkdirs()
         }
 
-        new File(warningsFilePath, "${recordContent.user}.txt") << "${recordContent} \n\n"
+        def reportFileForEachAccount = new File(warningsFilePath, "${violationRecord.user}.csv")
+        buildHeaderLine(reportFileForEachAccount)
+        appendToReportFile(reportFileForEachAccount, violationRecord)
+    }
+
+    def void buildHeaderLine(File reportFileForEachAccount) {
+        if (!reportFileForEachAccount.exists()) {
+            reportFileForEachAccount << "Account, Repo, Possible sensitive info found, Places where the possible sensitive info was found, " +
+                    "File url, Filename, Commit html url, Commit SHA \n"
+        }
+    }
+
+    def File appendToReportFile(File reportFileForEachAccount, violationRecord) {
+        reportFileForEachAccount << "${formatRecord(violationRecord)} \n"
+    }
+
+    def formatRecord(record) {
+        "${record.user}, ${record.repo}, ${record.violations}, ${record.type}, " +
+                "${record.fileBlobUrl}, ${record.filename}, ${record.commitHtmlUrl}, ${record.commit}"
     }
 
     def detectSensitiveInfo(content) {
