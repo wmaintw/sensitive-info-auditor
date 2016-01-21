@@ -9,6 +9,11 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
 @Slf4j
 class Auditor {
+    public static final String VIOLATION_WORDS_SEPERATOR = ' | '
+    public static final String REPORT_HEADER = "Account, Repo, Possible sensitive info found, " +
+            "Places where the possible sensitive info was found, " +
+            "File url, Filename, Commit html url, Commit SHA \n"
+
     def reportDate = new Date()
     def THREADS = 2
     def users = this.getClass().getResource("github-accounts.txt").readLines()
@@ -122,8 +127,7 @@ class Auditor {
 
     def void buildHeaderLine(File reportFileForEachAccount) {
         if (!reportFileForEachAccount.exists()) {
-            reportFileForEachAccount << "Account, Repo, Possible sensitive info found, Places where the possible sensitive info was found, " +
-                    "File url, Filename, Commit html url, Commit SHA \n"
+            reportFileForEachAccount << REPORT_HEADER
         }
     }
 
@@ -132,7 +136,7 @@ class Auditor {
     }
 
     def formatRecord(record) {
-        "${record.user}, ${record.repo}, ${record.violations}, ${record.type}, " +
+        "${record.user}, ${record.repo}, ${record.violations.join(VIOLATION_WORDS_SEPERATOR)}, ${record.type}, " +
                 "${record.fileBlobUrl}, ${record.filename}, ${record.commitHtmlUrl}, ${record.commit}"
     }
 
