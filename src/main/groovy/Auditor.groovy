@@ -12,7 +12,7 @@ class Auditor {
     public static final String VIOLATION_WORDS_SEPERATOR = ' | '
     public static final String REPORT_HEADER = "Account, Repo, Possible sensitive info found, " +
             "Places where the possible sensitive info was found, " +
-            "File url, Filename, Commit html url, Commit SHA \n"
+            "Filename, Commit html url, Commit SHA \n"
 
     def reportDate = new Date()
     def THREADS = 2
@@ -138,7 +138,7 @@ class Auditor {
 
     def formatRecord(record) {
         "${record.user}, ${record.repo}, ${record.violations.join(VIOLATION_WORDS_SEPERATOR)}, ${record.type}, " +
-                "${record.fileBlobUrl}, ${record.filename}, ${record.commitHtmlUrl}, ${record.commit}"
+                "${record.filename}, ${record.commitHtmlUrl}, ${record.commit}"
     }
 
     def detectSensitiveInfo(content) {
