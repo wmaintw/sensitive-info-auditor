@@ -1,7 +1,8 @@
+import audit.Auditor
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 
-import static CommandLineLogger.log
+import static utils.CommandLineLogger.log
 
 @Slf4j
 class AuditLauncher {

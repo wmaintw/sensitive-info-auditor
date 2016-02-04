@@ -1,16 +1,19 @@
+package audit
+
+import github.GithubApiClient
 import groovy.util.logging.Slf4j
 
 import java.util.concurrent.Executors
 
-import static CommandLineLogger.log
-import static WhereSensitiveWordsFound.*
+import static utils.CommandLineLogger.log
+import static utils.WhereSensitiveWordsFound.*
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
 @Slf4j
 class Auditor {
     def THREADS = 2
-    def users = this.getClass().getResource("github-accounts.txt").readLines()
-    def sensitiveWords = this.getClass().getResource("sensitive-words.txt").readLines()
+    def users = this.getClass().getResource("../github-accounts.txt").readLines()
+    def sensitiveWords = this.getClass().getResource("../sensitive-words.txt").readLines()
 
     def apiClient = new GithubApiClient()
     def reporter = new SensitiveInfoReporter()
@@ -18,7 +21,7 @@ class Auditor {
     def doAudit() {
         log("${users.size()} users' repo to be audited")
 
-        def allUsersRepos = fetchReposOfEveryone(users)
+        def allUsersRepos = apiClient.fetchPublicNoneForkedReposInBatch(users)
 
         def auditEveryRepoClosure = { user, repos ->
             log("[${Thread.currentThread().getName()}] start to scan ${user}'s repos, ${repos.size} in total")
@@ -127,26 +130,8 @@ class Auditor {
          filename: filename, fileBlobUrl: fileBlobUrl, commitHtmlUrl: commitHtmlUrl]
     }
 
-    def fetchReposOfEveryone(users) {
-        def repos = [:]
-
-        users.eachWithIndex { user, index ->
-            log("${index + 1} / ${users.size()} fetching ${user}'s repos.")
-            repos["${user}"] = fetchPublicNoneForkedRepos(user)
-        }
-
-        repos
-    }
-
-    def fetchPublicNoneForkedRepos(user) {
-        def repos = apiClient.fetchRepos(user)
-        repos.grep { it.fork == false }
-    }
-
     def checkApiRateLimit() {
-        def limitation = apiClient.fetchApiRateLimit()
-        def remaining = limitation.resources.core.remaining
-        def resetDate = new Date((limitation.resources.core.reset as long) * 1000)
-        log("API rate limit remaining: ${remaining}, reset date: ${resetDate}")
+        def status = apiClient.fetchRateLimitCurrentStatus()
+        log("API rate limit remaining: ${status.remaining}, reset date: ${status.resetDate}")
     }
 }

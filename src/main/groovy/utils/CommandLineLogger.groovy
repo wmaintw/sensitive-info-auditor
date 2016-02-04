@@ -1,3 +1,4 @@
+package utils
 
 class CommandLineLogger {
     def static log(GString logMessage) {

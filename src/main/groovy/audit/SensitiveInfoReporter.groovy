@@ -1,3 +1,4 @@
+package audit
 
 class SensitiveInfoReporter {
     private static final String WORDS_SEPERATOR = ' | '
