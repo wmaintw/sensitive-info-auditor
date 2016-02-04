@@ -5,6 +5,9 @@ import groovyx.net.http.RESTClient
 
 import java.util.concurrent.Executors
 
+import static WhereViolationFound.CommitMessage
+import static WhereViolationFound.FileContent
+import static WhereViolationFound.Filename
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
 @Slf4j
@@ -12,7 +15,7 @@ class Auditor {
     public static final String VIOLATION_WORDS_SEPERATOR = ' | '
     public static final String REPORT_HEADER = "Account, Repo, Possible sensitive info found, " +
             "Places where the possible sensitive info was found, " +
-            "Filename, Commit html url, Commit SHA \n"
+            "Filename or Commit message, Commit html url, Commit SHA \n"
 
     def reportDate = new Date()
     def THREADS = 2
@@ -81,9 +84,7 @@ class Auditor {
 
             def violations = detectSensitiveInfo(singleCommit.commit.message)
             if (isExist(violations)) {
-                recordTheseViolations([user: user, repo: repo.name, commit: singleCommit.sha, violations: violations,
-                                       type: "message", content: singleCommit.commit.message,
-                                       fileBlobUrl:"", commitHtmlUrl:singleCommit.html_url])
+                recordTheseViolations(commitMessageViolation(user, repo.name, violations, singleCommit))
             }
 
             singleCommit.files.each { file ->
@@ -96,18 +97,14 @@ class Auditor {
     private void detectByFilename(file, user, repoName, singleCommit) {
         def violations = detectSensitiveInfo(file.filename)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repoName, commit: singleCommit.sha, violations: violations,
-                                   type: "filename", filename: file.filename, content: file.patch,
-                                   fileBlobUrl:file.blob_url, commitHtmlUrl:singleCommit.html_url])
+            recordTheseViolations(fileViolation(user, repoName, violations, Filename, file, singleCommit))
         }
     }
 
     private void detectByContent(file, user, repoName, singleCommit) {
         def violations = detectSensitiveInfo(file.patch)
         if (isExist(violations)) {
-            recordTheseViolations([user: user, repo: repoName, commit: singleCommit.sha, violations: violations,
-                                   type: "file", filename: file.filename, content: file.patch,
-                                   fileBlobUrl:file.blob_url, commitHtmlUrl:singleCommit.html_url])
+            recordTheseViolations(fileViolation(user, repoName, violations, FileContent, file, singleCommit))
         }
     }
 
@@ -124,6 +121,20 @@ class Auditor {
         def reportFileForEachAccount = new File(warningsFilePath, "${violationRecord.user}.csv")
         buildHeaderLine(reportFileForEachAccount)
         appendToReportFile(reportFileForEachAccount, violationRecord)
+    }
+
+    def commitMessageViolation(user, repoName, violations, singleCommit) {
+        newViolation(user, repoName, singleCommit.sha, violations, CommitMessage, singleCommit.commit.message, "", singleCommit.html_url)
+    }
+
+    def fileViolation(user, repoName, violations, whereTheViolationFound, file, singleCommit) {
+        newViolation(user, repoName, singleCommit.sha, violations, whereTheViolationFound, file.filename, file.blob_url, singleCommit.html_url)
+    }
+
+    def newViolation(user, repoName, commitSha, violations, violationType, filename, fileBlobUrl, commitHtmlUrl) {
+        [user       : user, repo: repoName, commit: commitSha, violations: violations,
+         type       : violationType, filename: filename,
+         fileBlobUrl: fileBlobUrl, commitHtmlUrl: commitHtmlUrl]
     }
 
     def void buildHeaderLine(File reportFileForEachAccount) {
