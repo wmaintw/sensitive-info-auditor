@@ -3,12 +3,28 @@ import groovyx.net.http.RESTClient
 
 import static CommandLineLogger.log
 
-class ApiClient {
+class GithubApiClient {
 
     private static final String GITHUB_API_BASE_URL = "https://api.github.com/"
     private static final int TIME_INTERVAL = 300
 
     def token = this.getClass().getResource("oauth-token.txt").readLines().get(0)
+
+    def fetchRepos(user) {
+        request("/users/${user}/repos")
+    }
+
+    def fetchCommits(user, repoName) {
+        request("/repos/${user}/${repoName}/commits")
+    }
+
+    def fetchSingleCommit(user, repoName, commitSha) {
+        request("/repos/${user}/${repoName}/commits/${commitSha}")
+    }
+
+    def fetchApiRateLimit() {
+        request("/rate_limit")
+    }
 
     def request(path) {
         request(path, [:])
