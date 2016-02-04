@@ -86,14 +86,14 @@ class Auditor {
     def void detectSensitiveInfoInFilename(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.filename)
         if (isExist(matchedSensitiveWords)) {
-            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, InFilename, file, singleCommit))
+            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, Filename, file, singleCommit))
         }
     }
 
     def void detectSensitiveInfoInFileContent(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.patch)
         if (isExist(matchedSensitiveWords)) {
-            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, InFileContent, file, singleCommit))
+            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, FileContent, file, singleCommit))
         }
     }
 
@@ -118,7 +118,7 @@ class Auditor {
     }
 
     def sensitiveInfoFoundInCommitMessage(user, repoName, matchedSensitiveWords, singleCommit) {
-        createFindings(user, repoName, singleCommit.sha, matchedSensitiveWords, InCommitMessage,
+        createFindings(user, repoName, singleCommit.sha, matchedSensitiveWords, CommitMessage,
                 singleCommit.commit.message, "", singleCommit.html_url)
     }
 

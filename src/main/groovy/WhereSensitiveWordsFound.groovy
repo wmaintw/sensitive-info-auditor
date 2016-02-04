@@ -1,3 +1,3 @@
 enum WhereSensitiveWordsFound {
-    InCommitMessage, InFilename, InFileContent
+    CommitMessage, Filename, FileContent
 }
