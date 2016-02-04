@@ -1,6 +1,4 @@
 import groovy.util.logging.Slf4j
-import groovyx.net.http.HttpResponseException
-import groovyx.net.http.RESTClient
 
 import java.util.concurrent.Executors
 
@@ -20,11 +18,12 @@ class Auditor {
     def users = this.getClass().getResource("github-accounts.txt").readLines()
     def sensitiveWords = this.getClass().getResource("sensitive-words.txt").readLines()
     def token = this.getClass().getResource("oauth-token.txt").readLines().get(0)
+    def apiClient = new ApiClient()
 
     def doAudit() {
         log("${users.size()} users' repo to be audited")
 
-        def allUsersRepos = reposOfEveryone(users)
+        def allUsersRepos = fetchReposOfEveryone(users)
 
         def auditEveryRepo = { user, repos ->
             log("[${Thread.currentThread().getName()}] start to scan ${user}'s repos, ${repos.size} in total")
@@ -52,7 +51,7 @@ class Auditor {
 
             def commitsPath = "/repos/${user}/${repo.name}/commits"
             log.debug(commitsPath)
-            def commits = requestApi(commitsPath)
+            def commits = apiClient.request(commitsPath)
             log("[${user}] [${repo.name}] ${commits.size} commit in total")
 
             auditEveryCommit(user, repo, commits)
@@ -63,7 +62,7 @@ class Auditor {
         commits.eachWithIndex { commitObject, commitIndex ->
             log("[${user}] [${repo.name}] ${commitIndex + 1}/${commits.size} commit")
 
-            def singleCommit = requestApi("/repos/${user}/${repo.name}/commits/${commitObject.sha}")
+            def singleCommit = apiClient.request("/repos/${user}/${repo.name}/commits/${commitObject.sha}")
 
             def violations = detectSensitiveInfo(singleCommit.commit.message)
             if (isExist(violations)) {
@@ -151,56 +150,26 @@ class Auditor {
         violation
     }
 
-    def reposOfEveryone(users) {
+    def fetchReposOfEveryone(users) {
         def repos = [:]
 
         users.eachWithIndex { user, index ->
             log("${index + 1} / ${users.size()} fetching ${user}'s repos.")
-            repos["${user}"] = reposOfUser(user)
+            repos["${user}"] = fetchReposOfUser(user)
         }
 
         repos
     }
 
-    def reposOfUser(user) {
-        def repos = requestApi("/users/${user}/repos")
+    def fetchReposOfUser(user) {
+        def repos = apiClient.request("/users/${user}/repos")
         repos.grep { it.fork == false }
     }
 
     def checkApiRateLimit() {
-        def limitation = requestApi("/rate_limit")
+        def limitation = apiClient.request("/rate_limit")
         def remaining = limitation.resources.core.remaining
         def resetDate = new Date((limitation.resources.core.reset as long) * 1000)
         log("API rate limit remaining: ${remaining}, reset date: ${resetDate}")
-    }
-
-    def requestApi(path) {
-        requestApi(path, [:])
-    }
-
-    def requestApi(path, query) {
-        def userPassBase64 = "${token}:x-oauth-basic".toString().bytes.encodeBase64()
-        def data = []
-
-        // for github rate limit consideration
-        Thread.sleep(300)
-
-        try {
-            data = apiClient().get(path: path, query: query, headers: ['Authorization': "Basic ${userPassBase64}",
-                                                            'Accept'       : 'application/json',
-                                                            'User-Agent'   : 'Apache HTTPClient']).data
-        } catch (HttpResponseException e) {
-            log("[WARNING] HttpResponseException occurred, the reason might be the repo is empty, or rate limit, skip this one. Detailed error message: ${e.message}")
-            log("[WARNING] path: ${path}, query: ${query}, skipped.")
-        }
-
-        data
-    }
-
-    def RESTClient apiClient() {
-        def client = new RESTClient("https://api.github.com/")
-        client.ignoreSSLIssues()
-
-        client
     }
 }
