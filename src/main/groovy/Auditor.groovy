@@ -155,7 +155,7 @@ class Auditor {
         def repos = [:]
 
         users.eachWithIndex { user, index ->
-            println "${index + 1} / ${users.size()} fetching ${user}'s repos."
+            log("${index + 1} / ${users.size()} fetching ${user}'s repos.")
             repos["${user}"] = reposOfUser(user)
         }
 
