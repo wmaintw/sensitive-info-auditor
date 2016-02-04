@@ -8,17 +8,12 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
 @Slf4j
 class Auditor {
-    public static final String WORDS_SEPERATOR = ' | '
-    public static final String REPORT_HEADER = "Account, Repo, Possible sensitive info found, " +
-            "Places where the possible sensitive info was found, " +
-            "Filename or Commit message, Commit html url, Commit SHA \n"
-
-    def reportDate = new Date()
     def THREADS = 2
     def users = this.getClass().getResource("github-accounts.txt").readLines()
     def sensitiveWords = this.getClass().getResource("sensitive-words.txt").readLines()
-    def token = this.getClass().getResource("oauth-token.txt").readLines().get(0)
+
     def apiClient = new GithubApiClient()
+    def reporter = new SensitiveInfoReporter()
 
     def doAudit() {
         log("${users.size()} users' repo to be audited")
@@ -72,7 +67,7 @@ class Auditor {
     def auditCommitMessage(user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(singleCommit.commit.message)
         if (isExist(matchedSensitiveWords)) {
-            storeFindings(sensitiveInfoFoundInCommitMessage(user, repoName, matchedSensitiveWords, singleCommit))
+            reporter.storeFindings(sensitiveInfoFoundInCommitMessage(user, repoName, matchedSensitiveWords, singleCommit))
         }
     }
 
@@ -86,14 +81,14 @@ class Auditor {
     def void detectSensitiveInfoInFilename(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.filename)
         if (isExist(matchedSensitiveWords)) {
-            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, Filename, file, singleCommit))
+            reporter.storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, Filename, file, singleCommit))
         }
     }
 
     def void detectSensitiveInfoInFileContent(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.patch)
         if (isExist(matchedSensitiveWords)) {
-            storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, FileContent, file, singleCommit))
+            reporter.storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, FileContent, file, singleCommit))
         }
     }
 
@@ -130,32 +125,6 @@ class Auditor {
     def createFindings(user, repoName, commitSha, matchedSensitiveWords, whereTheSensitiveWordsFound, filename, fileBlobUrl, commitHtmlUrl) {
         [user: user, repo: repoName, commitSha: commitSha, matchedSensitiveWords: matchedSensitiveWords, whereTheSensitiveWordsFound: whereTheSensitiveWordsFound,
          filename: filename, fileBlobUrl: fileBlobUrl, commitHtmlUrl: commitHtmlUrl]
-    }
-
-    synchronized storeFindings(record) {
-        def reportFilePath = new File("scan-report/${reportDate.time}")
-        if (!reportFilePath.exists()) {
-            reportFilePath.mkdirs()
-        }
-
-        def reportFileForEachUser = new File(reportFilePath, "${record.user}.csv")
-        buildHeaderLine(reportFileForEachUser)
-        appendToReportFile(reportFileForEachUser, record)
-    }
-
-    def void buildHeaderLine(File reportFile) {
-        if (!reportFile.exists()) {
-            reportFile << REPORT_HEADER
-        }
-    }
-
-    def File appendToReportFile(File reportFile, record) {
-        reportFile << "${formatFindings(record)} \n"
-    }
-
-    def formatFindings(record) {
-        "${record.user}, ${record.repo}, ${record.matchedSensitiveWords.join(WORDS_SEPERATOR)}, ${record.whereTheSensitiveWordsFound}, " +
-                "${record.filename}, ${record.commitHtmlUrl}, ${record.commitSha}"
     }
 
     def fetchReposOfEveryone(users) {
