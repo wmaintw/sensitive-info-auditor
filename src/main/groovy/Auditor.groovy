@@ -1,13 +1,11 @@
-import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.net.http.HttpResponseException
 import groovyx.net.http.RESTClient
 
 import java.util.concurrent.Executors
 
-import static WhereViolationFound.CommitMessage
-import static WhereViolationFound.FileContent
-import static WhereViolationFound.Filename
+import static CommandLineLogger.log
+import static WhereViolationFound.*
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
 @Slf4j
@@ -22,21 +20,6 @@ class Auditor {
     def users = this.getClass().getResource("github-accounts.txt").readLines()
     def sensitiveWords = this.getClass().getResource("sensitive-words.txt").readLines()
     def token = this.getClass().getResource("oauth-token.txt").readLines().get(0)
-
-    static def main(args) {
-        def auditor = new Auditor()
-
-        def startDate = new Date()
-        log("Start auditing, ${startDate}")
-
-        auditor.doAudit()
-
-        def finishDate = new Date()
-        use(TimeCategory) {
-            def duration = finishDate - startDate
-            log("Done, duration: ${duration}")
-        }
-    }
 
     def doAudit() {
         log("${users.size()} users' repo to be audited")
@@ -219,9 +202,5 @@ class Auditor {
         client.ignoreSSLIssues()
 
         client
-    }
-
-    private static log(GString logMessage) {
-        println "${new Date()} ${logMessage}"
     }
 }
