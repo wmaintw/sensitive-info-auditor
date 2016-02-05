@@ -1,6 +1,6 @@
 package github
 
-import audit.RateLimitation
+import model.RateLimitation
 import utils.ApiClient
 
 import static utils.CommandLineLogger.log

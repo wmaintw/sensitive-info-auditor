@@ -1,19 +1,20 @@
 package audit
 
 import github.GithubApiClient
-import groovy.util.logging.Slf4j
+import model.Findings
+import model.MatchedSensitiveWords
 
 import java.util.concurrent.Executors
 
+import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 import static utils.CommandLineLogger.log
 import static utils.WhereSensitiveWordsFound.*
-import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
 
-@Slf4j
 class Auditor {
     def THREADS = 2
     def users = this.getClass().getResource("../github-accounts.txt").readLines()
-    def sensitiveWords = this.getClass().getResource("../sensitive-words.txt").readLines()
+    def generalSensitiveWords = this.getClass().getResource("../sensitive-words-general.txt").readLines()
+    def clientSpecificSensitiveWords = this.getClass().getResource("../sensitive-words.txt").readLines()
 
     def apiClient = new GithubApiClient()
     def reporter = new SensitiveInfoReporter()
@@ -28,6 +29,8 @@ class Auditor {
             auditEveryRepo(user, repos)
         }
         startAuditUsingMultipleThreads(allUsersRepos, auditEveryRepoClosure)
+
+        generateReports()
     }
 
     def void startAuditUsingMultipleThreads(LinkedHashMap allUsersRepos, auditEveryRepoClosure) {
@@ -69,7 +72,7 @@ class Auditor {
 
     def auditCommitMessage(user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(singleCommit.commit.message)
-        if (isExist(matchedSensitiveWords)) {
+        if (matchedSensitiveWords.isFound()) {
             reporter.storeFindings(sensitiveInfoFoundInCommitMessage(user, repoName, matchedSensitiveWords, singleCommit))
         }
     }
@@ -83,37 +86,40 @@ class Auditor {
 
     def void detectSensitiveInfoInFilename(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.filename)
-        if (isExist(matchedSensitiveWords)) {
+        if (matchedSensitiveWords.isFound()) {
             reporter.storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, Filename, file, singleCommit))
         }
     }
 
     def void detectSensitiveInfoInFileContent(file, user, repoName, singleCommit) {
         def matchedSensitiveWords = detectSensitiveInfo(file.patch)
-        if (isExist(matchedSensitiveWords)) {
+        if (matchedSensitiveWords.isFound()) {
             reporter.storeFindings(sensitiveInfoFoundInFile(user, repoName, matchedSensitiveWords, FileContent, file, singleCommit))
         }
     }
 
-    def detectSensitiveInfo(content) {
+    def MatchedSensitiveWords detectSensitiveInfo(content) {
         if (content == null) {
             return []
         }
 
-        def matchedSensitiveWords = []
+        def matchedSensitiveWords = new MatchedSensitiveWords()
 
-        sensitiveWords.each { keyword ->
+        generalSensitiveWords.each { keyword ->
             if (containsIgnoreCase(content, keyword)) {
-                matchedSensitiveWords.add(keyword)
+                matchedSensitiveWords.generalSensitiveWords.add(keyword)
+            }
+        }
+
+        clientSpecificSensitiveWords.each { keyword ->
+            if (containsIgnoreCase(content, keyword)) {
+                matchedSensitiveWords.clientSpecificSensitiveWords.add(keyword)
             }
         }
 
         matchedSensitiveWords
     }
 
-    def isExist(sensitiveWordsFound) {
-        sensitiveWordsFound.size() > 0
-    }
 
     def sensitiveInfoFoundInCommitMessage(user, repoName, matchedSensitiveWords, singleCommit) {
         createFindings(user, repoName, singleCommit.sha, matchedSensitiveWords, CommitMessage,
@@ -126,12 +132,26 @@ class Auditor {
     }
 
     def createFindings(user, repoName, commitSha, matchedSensitiveWords, whereTheSensitiveWordsFound, filename, fileBlobUrl, commitHtmlUrl) {
-        [user: user, repo: repoName, commitSha: commitSha, matchedSensitiveWords: matchedSensitiveWords, whereTheSensitiveWordsFound: whereTheSensitiveWordsFound,
-         filename: filename, fileBlobUrl: fileBlobUrl, commitHtmlUrl: commitHtmlUrl]
+        def findings = new Findings()
+        findings.user = user
+        findings.repoName = repoName
+        findings.commitSha = commitSha
+        findings.matchedSensitiveWords = matchedSensitiveWords
+        findings.whereTheSensitiveWordsFound = whereTheSensitiveWordsFound
+        findings.filename = filename
+        findings.fileBlobUrl = fileBlobUrl
+        findings.commitHtmlUrl = commitHtmlUrl
+
+        findings
     }
 
     def checkApiRateLimit() {
         def status = apiClient.fetchRateLimitCurrentStatus()
         log("API rate limit remaining: ${status.remaining}, reset date: ${status.resetDate}")
+    }
+
+    def generateReports() {
+        log("Generating summary report")
+        reporter.generateSummaryReport()
     }
 }

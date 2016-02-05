@@ -1,4 +1,4 @@
-package audit
+package model
 
 class RateLimitation {
     def remaining

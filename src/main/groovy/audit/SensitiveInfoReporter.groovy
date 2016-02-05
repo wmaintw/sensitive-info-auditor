@@ -1,14 +1,24 @@
 package audit
 
+import model.Findings
+
 class SensitiveInfoReporter {
     private static final String WORDS_SEPERATOR = ' | '
-    private static final String REPORT_HEADER = "Account, Repo, Possible sensitive info found, " +
+    private static final String REPORT_HEADER = "Account, Repo, Possible client sensitive info found, " +
+            "Possible general sensitive info found, " +
             "Places where the possible sensitive info was found, " +
             "Filename or Commit message, Commit html url, Commit SHA \n"
 
+    private SummaryReporter summaryReporter = new SummaryReporter()
+
     def reportDate = new Date()
 
-    def storeFindings(record) {
+    def storeFindings(Findings record) {
+        summaryReporter.register(record)
+        store(record)
+    }
+
+    def void store(Findings record) {
         File reportFilePath = createReportFolder()
         def reportFileForEachUser = new File(reportFilePath, "${record.user}.csv")
         buildHeaderLine(reportFileForEachUser)
@@ -16,11 +26,15 @@ class SensitiveInfoReporter {
     }
 
     synchronized createReportFolder() {
-        def reportFilePath = new File("scan-report/${reportDate.time}")
+        def reportFilePath = new File("scan-report/${reportFolderName()}")
         if (!reportFilePath.exists()) {
             reportFilePath.mkdirs()
         }
         reportFilePath
+    }
+
+    private String reportFolderName() {
+        reportDate.format("yyyy-MM-dd hh:mm:ss")
     }
 
     def void buildHeaderLine(File reportFile) {
@@ -29,13 +43,18 @@ class SensitiveInfoReporter {
         }
     }
 
-    def File appendToReportFile(File reportFile, record) {
+    def File appendToReportFile(File reportFile, Findings record) {
         reportFile << "${formatFindings(record)} \n"
     }
 
-    def formatFindings(record) {
-        "${record.user}, ${record.repo}, ${record.matchedSensitiveWords.join(WORDS_SEPERATOR)}, " +
+    def formatFindings(Findings record) {
+        "${record.user}, ${record.repoName}, ${record.matchedSensitiveWords.clientSpecificSensitiveWords.join(WORDS_SEPERATOR)}, " +
+                "${record.matchedSensitiveWords.generalSensitiveWords.join(WORDS_SEPERATOR)}, " +
                 "${record.whereTheSensitiveWordsFound}, ${record.filename}, " +
                 "${record.commitHtmlUrl}, ${record.commitSha}"
+    }
+
+    def generateSummaryReport() {
+        summaryReporter.generateSummaryReport(reportFolderName())
     }
 }
