@@ -7,7 +7,8 @@ Step 1. pull代码到本地
 Step 2. 配置：在`src/main/resources/` 目录下新建3个txt文件，分别命名为:
 
 - `github-accounts.txt`，被检查的github账号，一行一条记录
-- `sensitive-words.txt`，敏感词，一行一条记录
+- `sensitive-words.txt`，高级别敏感词，一行一条记录
+- `sensitive-words-general.txt`，常规敏感词，一行一条记录
 - `oauth-token.txt`，调用github api需要用到access token，可以在github账号的设置里自助生成，将准备好的access token放到这个文件里的第一行
 
 Step 3. 运行命令执行检查：在项目根目录，执行以下命令`gradle run`
