@@ -51,12 +51,18 @@ class Auditor {
     def auditEveryRepo(user, repos) {
         repos.eachWithIndex { repo, repoIndex ->
             log("[${user}] scanning repo: ${repo.name}, (${repoIndex + 1} of ${repos.size()})")
-            checkApiRateLimit()
 
-            def commits = apiClient.fetchCommits(user, repo.name)
-            log("[${user}] [${repo.name}] ${commits.size} commit in total")
+            try {
+                checkApiRateLimit()
 
-            auditEveryCommit(user, repo.name, commits)
+                def commits = apiClient.fetchCommits(user, repo.name)
+                log("[${user}] [${repo.name}] ${commits.size} commit in total")
+
+                auditEveryCommit(user, repo.name, commits)
+            } catch (Exception ex) {
+                log("Exception: ${ex}, Message: ${ex.getMessage()}")
+                log("Skip repo: ${user}/${repo.name}")
+            }
         }
     }
 
