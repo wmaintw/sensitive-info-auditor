@@ -83,17 +83,19 @@ class SummaryReporter {
 
     private String formatToHtml(FindingsSummary summary) {
         "<!DOCTYPE html><html><head><title>Github Sensitive Info Scan Summary Report</title>" +
-                "<style>table, th, td {border: 1px solid grey;border-collapse: collapse;}th, td {padding: 5px;text-align: left;}</style>" +
+                "<style>table, th, td {border: 1px solid grey;border-collapse: collapse;}th, td {padding: 5px;text-align: left;} .githubAccounts {display: none}</style>" +
+                "<script src=\"//code.jquery.com/jquery-1.12.0.min.js\"></script>" +
+                "<script src=\"//code.jquery.com/jquery-migrate-1.2.1.min.js\"></script>" +
                 "</head><body>" +
                 "<h1>Github Sensitive Info Scan Summary Report</h1>" +
                 "<div>found sensitive info in <b>${suspectGithubAccounts.size()}</b> github account</div>" +
                 "<div>scan finished at: ${reportGeneratedDateTime()}</div>" +
                 "<br />" +
                 "<h2>Client Specific Sensitive Words Found (${summary.clientSpecificSensitiveWordsSummary.size()} in total):</h2>" +
-                "<table><tr><th>Sensitive Words</th><th>Found n Times</th><th>Github Accounts</th></tr>" +
+                "<table><tr><th>Sensitive Words</th><th>Found n Times</th><th>Github Accounts, <a href=\"#\" onClick=\"\$('.githubAccounts').toggle()\">show / hide all</a></th></tr>" +
                 "${formatToHtmlTableRows(summary.clientSpecificSensitiveWordsSummary)}</table>" +
                 "<h2>General Sensitive Words Found (${summary.generalSensitiveWordsSummary.size()} in total):</h2>" +
-                "<table><tr><th>Sensitive Words</th><th>Found n Times</th><th>Github Accounts</th></tr>" +
+                "<table><tr><th>Sensitive Words</th><th>Found n Times</th><th>Github Accounts, <a href=\"#\" onClick=\"\$('.githubAccounts').toggle()\">show / hide all</a></th></tr>" +
                 "${formatToHtmlTableRows(summary.generalSensitiveWordsSummary)}</table>" +
                 "</body></html>"
     }
@@ -104,7 +106,11 @@ class SummaryReporter {
         summaryItems = summaryItems.sort { left, right -> right.counter <=> left.counter }
 
         for (FindingsSummaryItem item : summaryItems) {
-            htmlTableRows.add("<tr><td>${item.sensitiveWord}</td><td>${item.counter}</td><td>${uniqueGithubAccounts(item.githubAccountList)}</td></tr>")
+            def githubAccounts = uniqueGithubAccounts(item.githubAccountList)
+            htmlTableRows.add("<tr><td>${item.sensitiveWord}</td>" +
+                    "<td>${item.counter}</td>" +
+                    "<td>${githubAccounts.size()} in total" +
+                        "<span class='githubAccounts'>, ${githubAccounts}</span></td></tr>")
         }
 
         htmlTableRows.join(" ")
