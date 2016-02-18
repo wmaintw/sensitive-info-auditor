@@ -8,9 +8,10 @@ class SensitiveInfoReporter {
             "Possible general sensitive info found, " +
             "Places where the possible sensitive info was found, " +
             "Filename or Commit message, Commit html url, Commit SHA \n"
-    private static final String DEFAULT_REPORT_FOLDER = "scan-report"
 
     private SummaryReporter summaryReporter = new SummaryReporter()
+
+    def reportDate = new Date()
 
     def storeFindings(Findings record) {
         summaryReporter.register(record)
@@ -25,7 +26,7 @@ class SensitiveInfoReporter {
     }
 
     synchronized createReportFolder() {
-        def reportFilePath = new File(reportFolderName())
+        def reportFilePath = new File("scan-report/${reportFolderName()}")
         if (!reportFilePath.exists()) {
             reportFilePath.mkdirs()
         }
@@ -33,7 +34,7 @@ class SensitiveInfoReporter {
     }
 
     private String reportFolderName() {
-        DEFAULT_REPORT_FOLDER
+        reportDate.format("yyyy-MM-dd hh:mm:ss")
     }
 
     def void buildHeaderLine(File reportFile) {
