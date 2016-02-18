@@ -70,7 +70,7 @@ class SummaryReporter {
     }
 
     private createReportFolder(String reportFolderName) {
-        def reportFilePath = new File("scan-report/${reportFolderName}")
+        def reportFilePath = new File(reportFolderName)
         if (!reportFilePath.exists()) {
             reportFilePath.mkdirs()
         }
