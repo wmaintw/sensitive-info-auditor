@@ -7,12 +7,13 @@ import model.MatchedSensitiveWords
 import java.util.concurrent.Executors
 
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase
+import static utils.AccountType.ORGANIZATION
 import static utils.CommandLineLogger.log
 import static utils.WhereSensitiveWordsFound.*
 
 class Auditor {
     def THREADS = 2
-    def users = this.getClass().getResource("../github-accounts.txt").readLines()
+    def accounts = this.getClass().getResource("../github-accounts.txt").readLines()
     def generalSensitiveWords = this.getClass().getResource("../sensitive-words-general.txt").readLines()
     def clientSpecificSensitiveWords = this.getClass().getResource("../sensitive-words.txt").readLines()
 
@@ -20,8 +21,7 @@ class Auditor {
     def reporter = new SensitiveInfoReporter()
 
     def doAudit() {
-        log("${users.size()} users' repo to be audited")
-
+        def users = prepareUserAccounts()
         def allUsersRepos = apiClient.fetchPublicNoneForkedReposInBatch(users)
 
         def auditEveryRepoClosure = { user, repos ->
@@ -31,6 +31,49 @@ class Auditor {
         startAuditUsingMultipleThreads(allUsersRepos, auditEveryRepoClosure)
 
         generateReports()
+    }
+
+    private List<String> prepareUserAccounts() {
+        log("Start to parse user accounts.")
+
+        def users = parseUsersBasedOn(accounts)
+
+        log("${users.size()} users' repo to be audited")
+
+        users
+    }
+
+    private List<String> parseUsersBasedOn(accounts) {
+        def allUserIds = []
+        def singleAccount
+
+        accounts.each {
+            log("Parsing: ${it}")
+
+            singleAccount = apiClient.fetchAccount(it)
+            if (singleAccount.isEmpty()) {
+                log("Warning: Account ${it} doesn't exists, skip it.")
+                return
+            }
+
+            if (isTypeOfOrganization(singleAccount)) {
+                log("${it} is an organazation, start to fetch member accounts")
+                allUserIds.addAll(fetchUserIdFromOrganization(it))
+            } else {
+                allUserIds.add(it)
+            }
+        }
+
+        allUserIds.unique()
+    }
+
+    private boolean isTypeOfOrganization(account) {
+        ORGANIZATION.name().equalsIgnoreCase(account.type)
+    }
+
+    private List<String> fetchUserIdFromOrganization(String orgName) {
+        def users = apiClient.fetchUsersFromOrganization(orgName)
+        users.collect { it.login }
     }
 
     def void startAuditUsingMultipleThreads(LinkedHashMap allUsersRepos, auditEveryRepoClosure) {

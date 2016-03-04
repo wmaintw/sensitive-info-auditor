@@ -3,10 +3,10 @@ package github
 import model.RateLimitation
 import utils.ApiClient
 
+import static utils.AccountType.USER
 import static utils.CommandLineLogger.log
 
 class GithubApiClient {
-
     private ApiClient apiClient = new ApiClient()
 
     def fetchPublicNoneForkedReposInBatch(users) {
@@ -47,5 +47,26 @@ class GithubApiClient {
 
     def fetchApiRateLimitRawData() {
         apiClient.request("/rate_limit")
+    }
+
+    def fetchAccount(accountName) {
+        apiClient.request("/users/${accountName}")
+    }
+
+    def fetchUsersFromOrganization(String orgName) {
+        def allUsers = []
+        def fetchedUsers = []
+        def pageIndex = 1;
+
+        while (true) {
+            log("Fetching members in batch: ${pageIndex}")
+            fetchedUsers = apiClient.request("/orgs/${orgName}/members", [page: pageIndex++])
+            if (fetchedUsers.isEmpty()) {
+                break;
+            }
+            allUsers.addAll(fetchedUsers)
+        }
+
+        allUsers.grep { USER.name().equalsIgnoreCase(it.type) }
     }
 }
